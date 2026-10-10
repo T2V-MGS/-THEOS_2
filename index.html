@@ -93,13 +93,19 @@ h2 select{margin-left:auto;font:inherit;font-size:12px;padding:3px 8px;border:1p
 .th .vsep{margin-top:18px;padding-top:14px;border-top:1px dashed var(--bd)}
 .th .tot{color:var(--mut);font-size:12px;margin:0 2px 10px}.th .tot b{color:var(--tx)}
 .sat{height:58px;width:auto;border-radius:10px;display:block;box-shadow:0 2px 10px rgba(0,0,0,.35)}.exp{border:0;background:var(--gr);color:#fff;font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}.exp:hover{filter:brightness(1.1)}
+
+.adminbox{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:7px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);font-size:12px}
+.adminbox input{max-width:180px;min-width:110px;padding:6px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx)}
+.adminbox button{border:0;border-radius:6px;padding:7px 10px;background:var(--gr);color:#fff;cursor:pointer;font:inherit}
+.adminbox .muted{color:var(--mut)}.syncstatus{font-size:11px;color:var(--mut);min-width:130px}
+@media(max-width:900px){.adminbox{width:100%}.adminbox input{max-width:100%;flex:1}}
 </style></head><body>
 <header><div class="logo"><img alt="GISTDA" src="img/logo1.png"></div><div class="ttl"><b>สถิติการถ่ายภาพดาวเทียม THEOS-2</b><span>Global Incidence &amp; Cloud Cover Dashboard</span></div><img class="sat" alt="THEOS-2" src="img/logo2.png">
 <nav><button id="b1" class="on">Dashboard</button><button id="b2">Map</button></nav>
 <div class="filters">
 <label>ปี<select id="fy"></select></label><label>เดือน<select id="fm"></select></label>
 <label>Incidence Angle<select id="fg"></select></label><label>Cloud Cover<select id="fc"></select></label>
-<button type="button" class="exp" id="exp" title="ส่งออก Data Strip ตามตัวกรองที่เลือกอยู่เป็นไฟล์ .geojson">⬇ Export GeoJSON</button><label>เพิ่ม GeoJSON (หลายไฟล์ได้)<input type="file" id="file" accept=".geojson,.json" multiple></label><label>ขอบเขตไทย (GeoJSON · ไม่บังคับ)<input type="file" id="thf" accept=".geojson,.json"></label></div></header>
+<button type="button" class="exp" id="exp" title="ส่งออก Data Strip ตามตัวกรองที่เลือกอยู่เป็นไฟล์ .geojson">⬇ Export GeoJSON</button><label id="uploadLabel" hidden>เพิ่ม GeoJSON (หลายไฟล์ได้)<input type="file" id="file" accept=".geojson,.json" multiple></label><label>ขอบเขตไทย (GeoJSON · ไม่บังคับ)<input type="file" id="thf" accept=".geojson,.json"></label><div class="adminbox" id="adminBox"><span id="authLabel">ผู้ใช้ทั่วไป · ดูข้อมูลส่วนกลาง</span><input id="adminEmail" type="email" autocomplete="username" placeholder="อีเมลผู้ดูแล" aria-label="อีเมลผู้ดูแล"><input id="adminPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" aria-label="รหัสผ่านผู้ดูแล"><button type="button" id="loginBtn">เข้าสู่ระบบ</button><button type="button" id="logoutBtn" hidden>ออกจากระบบ</button><span id="syncStatus" class="syncstatus">กำลังตรวจสอบระบบส่วนกลาง…</span></div></div></header>
 <main>
 <section class="page on" id="pDash">
 <div class="card"><h2>ไฟล์ข้อมูล (กด ✕ เพื่อลบ)</h2><div id="srcD"></div></div>
@@ -129,6 +135,8 @@ h2 select{margin-left:auto;font:inherit;font-size:12px;padding:3px 8px;border:1p
 <h3>สรุปที่แสดง</h3><div id="mapSum"></div><p class="hint">คลิกที่รูป Data Strip เพื่อดูรายละเอียด</p>
 </aside><div id="map"></div></section></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
 <script src="data.js"></script>
 <script>
 const D0=DATA.map(r=>({d:r[0],y:+r[0].slice(0,4),m:+r[0].slice(5,7),g:r[1],c:r[2],a:r[3],id:r[5],p:r[6]}));
@@ -142,6 +150,7 @@ MC=["#e6194b","#f58231","#ffb000","#bfef45","#3cb44b","#00b3a4","#4363d8","#911e
 YC=["#e6194b","#4363d8","#3cb44b","#f58231","#911eb4","#00b3a4"],
 $=i=>document.getElementById(i),F={y:"",m:"",g:"",c:""},R={d1:"",d2:"",c1:"",c2:"",g1:"",g2:""},fmt=n=>Math.round(n).toLocaleString("en-US");
 let D=[],S=[],sid=0,yc={},mode="y",layers=[],lg;
+let sb=null,authUser=null,isAdmin=false,sharedChannel=null,refreshingShared=false;
 function calcArea(poly){const R=6371.0088,r=a=>{let s=0;for(let i=0;i<a.length-2;i+=2)s+=(a[i+2]-a[i])*Math.PI/180*(2+Math.sin(a[i+1]*Math.PI/180)+Math.sin(a[i+3]*Math.PI/180));return Math.abs(s)*R*R/2};return poly.reduce((t,p)=>t+r(p[0]),0)}
 function init(){
  $("fm").innerHTML='<option value="">ทั้งหมด</option>'+MN.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("");
@@ -155,7 +164,7 @@ function setData(){
  $("fy").innerHTML='<option value="">ทั้งหมด</option>'+ys.map(y=>`<option>${y}</option>`).join("");
  if(ys.includes(+keep))$("fy").value=keep;F.y=$("fy").value;
  $("swy").innerHTML=ys.map(y=>`<label><input type="color" data-y="${y}" value="${yc[y]}">${y}</label>`).join("");
- const h=S.length?S.map(s=>`<span class="chip">${s.name} · ${fmt(s.f.length)} strip <button data-s="${s.id}" title="ลบไฟล์นี้">✕</button></span>`).join(""):'<span class="hint">ยังไม่มีไฟล์ — เพิ่ม GeoJSON ที่มุมขวาบน</span>';
+ const h=S.length?S.map(s=>`<span class="chip">${s.name} · ${fmt(s.f.length)} strip ${s.sharedId&&isAdmin?`<button data-s="${s.id}" title="ลบชุดข้อมูลส่วนกลาง">✕</button>`:""}</span>`).join(""):'<span class="hint">ยังไม่มีไฟล์ข้อมูล</span>';
  $("srcD").innerHTML=h;$("srcM").innerHTML=h;const ds=D.map(x=>x.d).filter(Boolean).sort();document.querySelectorAll("[data-r^=d]").forEach(i=>{i.min=ds[0]||"";i.max=ds[ds.length-1]||""});update()}
 const mcol={};MC.forEach((c,i)=>mcol[i+1]=c);
 const col=x=>mode=="m"?mcol[x.m]:yc[x.y];
@@ -206,9 +215,83 @@ function tab(n){$("pDash").classList.toggle("on",n==1);$("pMap").classList.toggl
 $("b1").onclick=()=>tab(1);$("b2").onclick=()=>tab(2);
 const parse=j=>j.features.filter(f=>f.geometry&&f.properties).map(f=>{const p=f.properties,g=f.geometry,ps=(g.type=="Polygon"?[g.coordinates]:g.coordinates).map(q=>q.map(r=>r.flat())),dt=String(p.Date_Acqui||"");
   return{d:dt.slice(0,10),y:+dt.slice(0,4)||0,m:+dt.slice(5,7)||0,g:+p.GLOBAL_INCIDENCE||0,c:+p.CLOUD_NOTATION||0,a:calcArea(ps),id:p.DATASET_ID||"-",p:ps}});
-$("file").onchange=async e=>{for(const fl of e.target.files){try{const f=parse(JSON.parse(await fl.text()));f.forEach(mk);S.push({id:++sid,name:fl.name,f})}catch(err){alert("อ่านไฟล์ "+fl.name+" ไม่ได้: "+err.message)}}
- e.target.value="";setData()};
-document.addEventListener("click",e=>{const b=e.target.closest("[data-s]");if(!b)return;S=S.filter(s=>s.id!=b.dataset.s);setData()});
+async function refreshSharedData(){
+ if(!sb||refreshingShared)return; refreshingShared=true;
+ try{
+  const {data,error}=await sb.from("shared_datasets").select("id,name,geojson,updated_at").order("created_at",{ascending:true});
+  if(error)throw error;
+  S=S.filter(x=>!x.sharedId);
+  for(const row of (data||[])){
+   try{const f=parse(row.geojson);f.forEach(mk);S.push({id:"shared-"+row.id,sharedId:row.id,name:row.name,f,updated_at:row.updated_at})}
+   catch(err){console.warn("ข้ามชุดข้อมูลส่วนกลางที่อ่านไม่ได้",row.name,err)}
+  }
+  setData();setStatus("เชื่อมต่อส่วนกลางแล้ว · "+(data||[]).length+" ชุดข้อมูล");
+ }catch(err){console.error(err);setStatus("อ่านข้อมูลส่วนกลางไม่สำเร็จ: "+(err.message||err));}
+ finally{refreshingShared=false}
+}
+function setStatus(t){const el=$("syncStatus");if(el)el.textContent=t}
+function renderAuth(){
+ $("authLabel").textContent=isAdmin?"ผู้ดูแลระบบ: "+(authUser?.email||""):"ผู้ใช้ทั่วไป · ดูข้อมูลส่วนกลาง";
+ $("adminEmail").hidden=!!authUser;$("adminPassword").hidden=!!authUser;$("loginBtn").hidden=!!authUser;$("logoutBtn").hidden=!authUser;
+ $("uploadLabel").hidden=!isAdmin;
+ setData();
+}
+async function checkAdmin(user){
+ if(!user)return false;
+ const {data,error}=await sb.from("admin_users").select("user_id").eq("user_id",user.id).maybeSingle();
+ if(error){console.warn("ตรวจสอบสิทธิ์ผู้ดูแลไม่สำเร็จ",error);return false}return !!data;
+}
+async function startCentral(){
+ const cfg=window.THEOS2_SUPABASE_CONFIG;
+ if(!window.supabase||!cfg||!cfg.url||!cfg.anonKey||cfg.url.includes("YOUR_PROJECT")||cfg.anonKey.includes("YOUR_SUPABASE")){
+  setStatus("ยังไม่ได้ตั้งค่า Supabase");$("loginBtn").disabled=true;return;
+ }
+ sb=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:2}}});
+ const {data:{session}}=await sb.auth.getSession();
+ authUser=session?.user||null;isAdmin=await checkAdmin(authUser);renderAuth();await refreshSharedData();
+ sb.auth.onAuthStateChange((_event,session)=>{
+  authUser=session?.user||null;
+  // Avoid awaiting Supabase calls inside the auth callback; defer role lookup to a microtask.
+  Promise.resolve().then(async()=>{isAdmin=await checkAdmin(authUser);renderAuth();await refreshSharedData()});
+ });
+ const {data:channel}=sb.channel("shared-datasets-changes").on("postgres_changes",{event:"*",schema:"public",table:"shared_datasets"},()=>refreshSharedData()).subscribe();sharedChannel=channel;
+ // Re-check periodically as a fallback if the browser temporarily loses its Realtime connection.
+ setInterval(()=>refreshSharedData(),60000);
+}
+$("loginBtn").onclick=async()=>{
+ if(!sb){alert("กรุณาตั้งค่า supabase-config.js ก่อนค่ะ");return}
+ const email=$("adminEmail").value.trim(),password=$("adminPassword").value;
+ if(!email||!password){alert("กรุณากรอกอีเมลและรหัสผ่านผู้ดูแล");return}
+ $("loginBtn").disabled=true;
+ try{const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;
+  authUser=data.user;isAdmin=await checkAdmin(authUser);if(!isAdmin){await sb.auth.signOut();authUser=null;throw new Error("บัญชีนี้ยังไม่ได้รับสิทธิ์ผู้ดูแลในตาราง admin_users")}
+  $("adminPassword").value="";renderAuth();await refreshSharedData();setStatus("เข้าสู่ระบบผู้ดูแลแล้ว");
+ }catch(err){alert("เข้าสู่ระบบไม่สำเร็จ: "+err.message)}finally{$("loginBtn").disabled=false}
+};
+$("logoutBtn").onclick=async()=>{if(sb)await sb.auth.signOut();authUser=null;isAdmin=false;renderAuth();setStatus("ออกจากระบบแล้ว · ดูข้อมูลได้ตามปกติ")};
+$("file").onchange=async e=>{
+ const files=[...e.target.files];if(!files.length)return;
+ if(!sb||!isAdmin||!authUser){alert("การเพิ่มข้อมูลส่วนกลางต้องเข้าสู่ระบบด้วยบัญชีผู้ดูแล และตั้งค่า Supabase ให้เรียบร้อยก่อน");e.target.value="";return}
+ const input=e.target;input.disabled=true;
+ try{
+  for(const fl of files){
+   const j=JSON.parse(await fl.text());
+   // Validate against the same GeoJSON parser used by the dashboard before saving centrally.
+   parse(j);
+   const {error}=await sb.from("shared_datasets").insert({name:fl.name,geojson:j,created_by:authUser.id});
+   if(error)throw new Error(fl.name+": "+error.message);
+  }
+  await refreshSharedData();alert("บันทึกข้อมูลส่วนกลางเรียบร้อยแล้ว ผู้ใช้คนอื่นจะเห็นข้อมูลหลังระบบซิงก์");
+ }catch(err){alert("เพิ่มข้อมูลไม่สำเร็จ: "+err.message)}finally{input.disabled=false;input.value=""}
+};
+document.addEventListener("click",async e=>{
+ const b=e.target.closest("[data-s]");if(!b)return;
+ const item=S.find(x=>String(x.id)===String(b.dataset.s));if(!item||!item.sharedId)return;
+ if(!isAdmin||!sb){alert("เฉพาะผู้ดูแลระบบเท่านั้นที่ลบข้อมูลส่วนกลางได้");return}
+ if(!confirm("ยืนยันลบชุดข้อมูลส่วนกลาง “"+item.name+"” หรือไม่? การลบจะมีผลกับผู้ใช้ทุกคน"))return;
+ try{const {error}=await sb.from("shared_datasets").delete().eq("id",item.sharedId);if(error)throw error;await refreshSharedData();setStatus("ลบข้อมูลส่วนกลางแล้ว")}
+ catch(err){alert("ลบข้อมูลไม่สำเร็จ: "+err.message)}
+});
 const rgHTML=()=>`<div class="rg">
 <fieldset><legend>ช่วงเวลา (วันที่ถ่าย)</legend><div class="pr"><input type="date" data-r="d1"><span>–</span><input type="date" data-r="d2"></div></fieldset>
 <fieldset><legend>ช่วงเมฆ Cloud Cover (%)</legend><div class="pr"><input type="number" data-r="c1" min="0" max="100" step="1" placeholder="จาก 0"><span>–</span><input type="number" data-r="c2" min="0" max="100" step="1" placeholder="ถึง 100"></div></fieldset>
@@ -311,4 +394,5 @@ $("exp").onclick=()=>{const s=D.filter(flt),un=r=>{const o=[];for(let i=0;i<r.le
  a.download="THEOS2_DataStrip_"+fs.length+"strips_"+new Date().toISOString().slice(0,10)+".geojson";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
 
 init();
+startCentral();
 </script></body></html>
