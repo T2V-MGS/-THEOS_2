@@ -1,11 +1,13 @@
-# Dashboard THEOS-2 (CUF2024 Data Strip – Thailand)
+# Dashboard THEOS-2 (CUF Data Strip – Thailand)
 
-แดชบอร์ดแสดงข้อมูล THEOS-2 แบบเว็บเพจเดียว (single-page HTML)
+ข้อมูล Data Strip ปี 2024 – 2026
 
 🔗 ดูแดชบอร์ด: https://USERNAME.github.io/REPO-NAME/
 
+## โครงสร้างไฟล์
+- `index.html` หน้าแดชบอร์ด
+- `data/CUF2024.js`, `data/CUF2025.js`, `data/CUF2026.js` ข้อมูลแยกรายปี
+
 ## วิธีอัปเดตข้อมูล
-1. เปิดไฟล์ `index.html` ใน GitHub → กดไอคอนดินสอ (Edit)
-   หรือกด Add file → Upload files แล้วอัปโหลด `index.html` ทับไฟล์เดิม
-2. กด Commit changes
-3. รอประมาณ 1–2 นาที เว็บจะอัปเดตเอง
+อัปโหลดไฟล์ในโฟลเดอร์ `data/` ทับของเดิม (ชื่อเดิม) แล้ว Commit changes
+รอ 1–2 นาที แล้วรีเฟรชหน้าเว็บ (Ctrl+F5)
