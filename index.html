@@ -124,11 +124,9 @@ h2 select{margin-left:auto;font:inherit;font-size:12px;padding:3px 8px;border:1p
 <h3>สรุปที่แสดง</h3><div id="mapSum"></div><p class="hint">คลิกที่รูป Data Strip เพื่อดูรายละเอียด</p>
 </aside><div id="map"></div></section></main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
-<!-- AUTO-DATA-START -->
-<script src="data/CUF2024.js?v=1791641306"></script>
-<script src="data/CUF2025.js?v=1791641306"></script>
-<script src="data/CUF2026.js?v=1791641306"></script>
-<!-- AUTO-DATA-END -->
+<script src="data/CUF2024.js"></script>
+<script src="data/CUF2025.js"></script>
+<script src="data/CUF2026.js"></script>
 <script>const DATA=Object.keys(window.CUF_DATA||{}).sort().flatMap(k=>CUF_DATA[k]);</script>
 <script>
 const D0=DATA.map(r=>({d:r[0],y:+r[0].slice(0,4),m:+r[0].slice(5,7),g:r[1],c:r[2],a:r[3],id:r[5],p:r[6]}));
@@ -309,100 +307,4 @@ $("exp").onclick=()=>{const s=D.filter(flt),un=r=>{const o=[];for(let i=0;i<r.le
  a.download="THEOS2_DataStrip_"+fs.length+"strips_"+new Date().toISOString().slice(0,10)+".geojson";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
 
 init();
-</script><!-- AUTO-GEOJSON-START -->
-<script src="geojson/layers.js"></script>
-<script>
-(function () {
-  var POLL = 15000, REPLACE_BY_NAME = true, loaded = {}, dups = {}, replaced = {}, badge = null;
-  function say(msg, ok) {
-    if (!badge) {
-      badge = document.createElement("div");
-      badge.style.cssText = "position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:9999;padding:3px 10px;border-radius:99px;font:11px sans-serif;cursor:pointer;opacity:.92";
-      badge.title = "คลิกเพื่อซ่อน";
-      badge.onclick = function () { badge.style.display = "none"; };
-      document.body.appendChild(badge);
-    }
-    badge.style.background = ok ? "#e6f4ea" : "#fff3cd";
-    badge.style.color = ok ? "#1e4620" : "#664d03";
-    badge.textContent = msg;
-  }
-  function report(list) {
-    if (typeof window.AUTO_GEOJSON === "undefined") {
-      say("⚠ ไม่พบ geojson/layers.js — ตรวจว่าเปิด index.html ตัวเดียวกับที่ update_web.py แก้ และรันสคริปต์แล้ว", false);
-      return;
-    }
-    if (!list.length) {
-      say("⚠ layers.js ว่าง — ไม่มี .geojson ที่อ่านได้ในโฟลเดอร์ต้นทาง", false);
-      return;
-    }
-    var n = 0, d = 0;
-    Object.keys(loaded).forEach(function (k) {
-      var s = S.find(function (x) { return x.name === k; });
-      if (s) { n += s.f.length; }
-      d += dups[k] || 0;
-    });
-    say("✓ AUTO-GEOJSON: " + Object.keys(loaded).length + " ไฟล์ · " + n + " strip" +
-        (d ? " (ข้าม " + d + " strip ที่ซ้ำกับข้อมูลเดิม)" : "") +
-        (Object.keys(replaced).length ? " · แทนที่ " + Object.keys(replaced).map(function (k) { return replaced[k]; }).join(", ") + " เดิม" : ""), true);
-  }
-  function apply(list) {
-    list = list || [];
-    var changed = false;
-    Object.keys(loaded).forEach(function (n) {
-      var it = list.find(function (x) { return x.file === n; });
-      if (!it || it.v !== loaded[n]) {
-        S = S.filter(function (s) { return s.name !== n; });
-        delete loaded[n];
-        delete dups[n];
-        delete replaced[n];
-        changed = true;
-      }
-    });
-    list.forEach(function (it) {
-      if (loaded[it.file] === it.v) return;
-      try {
-        var f = parse(it.data), before = f.length;
-        var m = /^(CUF\d{4})\.(geo)?json$/i.exec(it.file);
-        if (REPLACE_BY_NAME && m) {
-          var nm = m[1].toUpperCase();
-          if (S.some(function (x) { return x.name.toUpperCase() === nm; })) {
-            S = S.filter(function (x) { return x.name.toUpperCase() !== nm; });
-            replaced[it.file] = m[1];
-          }
-        }
-        var seen = new Set(), sample = null;
-        S.forEach(function (s) {
-          s.f.forEach(function (x) {
-            if (x.id !== "-") { seen.add(String(x.id).trim()); if (sample === null) sample = x.id; }
-          });
-        });
-        f = f.filter(function (x) { return x.id === "-" || !seen.has(String(x.id).trim()); });
-        if (before === f.length && sample !== null && before > 0) {
-          console.log("[AUTO-GEOJSON] ไม่พบ id ซ้ำกับข้อมูลเดิม ตัวอย่าง id เดิม:", sample, "| id ใหม่:", it.data.features && it.data.features[0] && it.data.features[0].properties && it.data.features[0].properties.DATASET_ID);
-        }
-        dups[it.file] = before - f.length;
-        f.forEach(mk);
-        S.push({ id: ++sid, name: it.file, f: f });
-        loaded[it.file] = it.v;
-        changed = true;
-      } catch (e) {
-        console.warn("[AUTO-GEOJSON] อ่าน " + it.file + " ไม่ได้:", e);
-      }
-    });
-    if (changed) setData();
-    report(list);
-  }
-  function poll() {
-    var s = document.createElement("script");
-    s.src = "geojson/layers.js?t=" + Date.now();
-    s.onload = function () { apply(window.AUTO_GEOJSON || []); s.remove(); };
-    s.onerror = function () { s.remove(); };
-    document.head.appendChild(s);
-  }
-  apply(window.AUTO_GEOJSON);
-  setTimeout(poll, 1500);
-  setInterval(poll, POLL);
-})();
-</script>
-<!-- AUTO-GEOJSON-END -->
-</body></html>
+</script></body></html>
