@@ -1,0 +1,9 @@
+{
+  "name": "theos2-live-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard THEOS-2 แบบแชร์ข้อมูลเรียลไทม์ (Express + Server-Sent Events)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "dev": "node --watch server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "express": "^4.19.2" }
+}
