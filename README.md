@@ -16,7 +16,7 @@
 - `geojson/manifest.json` — รายการข้อมูลที่เว็บไซต์โหลด
 - `geojson/CUF2024.geojson`
 - `geojson/CUF2025.geojson`
-- `geojson/CUF20261107.geojson`
+- `geojson/CUF2026.geojson`
 
 ## หมายเหตุ
 - เว็บไซต์โหลด Leaflet CSS/JS จาก CDN และแผนที่พื้นหลังจากผู้ให้บริการแผนที่ออนไลน์ จึงต้องเชื่อมต่ออินเทอร์เน็ต
